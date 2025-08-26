@@ -1,4 +1,4 @@
-package rsmshipsgo
+package rsmships
 
 import (
 	"compress/gzip"
