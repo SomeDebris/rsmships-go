@@ -1,3 +1,3 @@
-module github.com/SomeDebris/rsm-ships-go
+module github.com/SomeDebris/rsmships-go
 
 go 1.23.5
