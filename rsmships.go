@@ -25,11 +25,12 @@ type CommandData struct {
 // Block structure. Stores basic information needed for Tournaments. Because not
 // all common block fields are present, unmarshalling a block into this struct
 // will purge all fields that may change the properties of a block.
-//
-// Block IDs are stored as json.RawMessage, as Reassembly will sometimes
-// serialize integers as hexadecimal values. This does not conform to the JSON
-// standard, and, as such, cannot be unmarshalled by encoding/json.
 type Block struct {
+	// Unqique block ID. Used to identify the block used by the ship.
+	//
+	// Block IDs are stored as json.RawMessage, as Reassembly will sometimes
+	// serialize integers as hexadecimal values. This does not conform to the JSON
+	// standard, and, as such, cannot be unmarshalled by encoding/json.
 	Id        json.RawMessage `json:"ident"`
 	Offset    [2]float64      `json:"offset"`
 	Angle     float64         `json:"angle"`
