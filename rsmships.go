@@ -6,11 +6,29 @@ import (
 	"os"
 )
 
+// command structure. Only stores command flags (e.g. ALWAYS_MANEUVER, AI_BINDING,
+// etc.) and faction number.
 type CommandData struct {
+	// Command flags change the behavior of a ship's AI. Tournament mode
+	// overwrites all command flags except for ALWAYS_MANEUVER, ALWAYS_KITE,
+	// ALWAYS_RUSH, and AI_BINDING.
+	//
+	// This is stored as a json.RawMessage, as Reassembly will serialize this
+	// feld as a single string instead of a string array when only one flag is
+	// specified.
 	Flags   json.RawMessage `json:"flags,omitempty"`
+	// The faction the command belongs to. Tournament mode overwrites this
+	// value to 100, 101, 102, etc.
 	Faction int             `json:"faction,omitempty"`
 }
 
+// Block structure. Stores basic information needed for Tournaments. Because not
+// all common block fields are present, unmarshalling a block into this struct
+// will purge all fields that may change the properties of a block.
+//
+// Block IDs are stored as json.RawMessage, as Reassembly will sometimes
+// serialize integers as hexadecimal values. This does not conform to the JSON
+// standard, and, as such, cannot be unmarshalled by encoding/json.
 type Block struct {
 	Id        json.RawMessage `json:"ident"`
 	Offset    [2]float64      `json:"offset"`
