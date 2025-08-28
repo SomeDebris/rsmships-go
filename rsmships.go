@@ -74,9 +74,16 @@ type ShipData struct {
 
 // Defines a ship. Marhsal/unmarshal ship files with this datatype.
 type Ship struct {
+	// When imported into the sandbox, the ship will be positioned at this angle
+	// (in radians).
 	Angle    float64    `json:"angle,omitempty"`
+	// When imported into the sandbox, the ship may be positioned offset from
+	// the cursor by this vector (?)
 	Position [2]float64 `json:"position,omitempty"`
+	// The ship's Data field as a ShipData type. This contains the ship's
+	// name, author, colors, and wgroup setting.
 	Data     ShipData   `json:"data"`
+	// All blocks that comprise the ship. Stored as a Block slice.
 	Blocks   []Block    `json:"blocks"`
 }
 
@@ -84,7 +91,7 @@ type Ship struct {
 // Tournaments. Not intended to store fleets exported from campaign mode.
 type Fleet struct {
 	// List of ships that the fleet comprises, stored as Ship structures.
-	Blueprints []Ship `json:"blueprints"`
+	Blueprints []*Ship `json:"blueprints"`
 	// Fleet primary color
 	Color0     any    `json:"color0,omitempty"`
 	// Fleet secondary color
@@ -107,6 +114,7 @@ type UnprocessedShip struct {
 	Name json.RawMessage `json:"name"`
 }
 
+// Checks if the Reassembly JSON file at path is a fleet file
 func IsReassemblyJSONFileFleet(path string) (bool, error) {
 	content, err := os.ReadFile(path)
 	if err != nil {
@@ -126,6 +134,7 @@ func IsReassemblyJSONFileFleet(path string) (bool, error) {
 	}
 }
 
+// Unmarshals a ship file at path to a Ship structure.
 func UnmarshalShipFromFile(path string) (Ship, error) {
 	content, err := os.ReadFile(path)
 	if err != nil {
@@ -138,10 +147,14 @@ func UnmarshalShipFromFile(path string) (Ship, error) {
 		return Ship{}, err
 	}
 
-	return RemoveNilIds(ship), nil
+	return ship.RemoveNilIds(), nil
 }
 
-func RemoveNilIds(ship Ship) Ship {
+// Remove all blocks with Nil or undefined block IDs. In Reassembly, an example
+// of a block with a nil ID are the useless square-shaped sometimes-launchable
+// blocks on a ship left near or on launchers after exiting and re-entering the
+// sandbox.
+func (ship *Ship) RemoveNilIds() Ship {
 	// new_blocks := make([]blocks
 	blocks := 0
 
@@ -162,9 +175,10 @@ func RemoveNilIds(ship Ship) Ship {
 
 	ship.Blocks = new_blocks
 
-	return ship
+	return *ship
 }
 
+// Marshal Ship ship to file at path. Should use ".json" file extension.
 func MarshalShipToFile(path string, ship Ship) error {
 	b, err := json.Marshal(ship)
 	if err != nil {
@@ -193,7 +207,12 @@ func UnmarshalFleetFromFile(path string) (Fleet, error) {
 	return fleet, nil
 }
 
-func MarshalFleetToFile(path string, fleet Fleet) error {
+// Marshal Fleet fleet to gzip-compressed JSON file at path. Should use
+// ".json.gz" file extension.
+
+// Note that although Reassembly does not save gzipped JSON fleet files when
+// cvar kWriteJSON is set to 1, it can still read them.
+func MarshalFleetToFileGzip(path string, fleet Fleet) error {
 	b, err := json.Marshal(fleet)
 	if err != nil {
 		return err
@@ -207,19 +226,41 @@ func MarshalFleetToFile(path string, fleet Fleet) error {
 
 	gz, _ := gzip.NewWriterLevel(file, gzip.BestCompression)
 	gz.Write(b)
-	gz.Close()
+	defer gz.Close()
 
 	return nil
 }
 
-func FleetFromShips(template Fleet, ships ...Ship) Fleet {
-	template.Blueprints = ships
+// Marshal Fleet fleet to JSON file at path. Should use ".json" file extension.
+func MarshalFleetToFile(path string, fleet Fleet) error {
+	b, err := json.Marshal(fleet)
+	if err != nil {
+		return err
+	}
 
-	return template
+	if err := os.WriteFile(path, b, 0666); err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func AssembleAlliance(template Fleet, ships []Ship) Fleet {
-	template.Blueprints = ships
-
-	return template
+// Return a copy of the Fleet with ships
+// Unsure if this is thread safe...
+func (f *Fleet) CopyUsingShips(ships []*Ship) Fleet {
+	return Fleet{
+		Color0: f.Color0,
+		Color1: f.Color1,
+		Color2: f.Color2,
+		Faction: f.Faction,
+		Name: f.Name,
+		Blueprints: ships,
+	}
 }
+
+// Return a copy of the Fleet with all listed ships as its Blueprints
+// Unsure if this is thread safe...
+func (f *Fleet) CopyUsingShipsList(ships ...*Ship) Fleet {
+	return f.CopyUsingShips(ships)
+}
+
